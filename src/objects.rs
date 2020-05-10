@@ -49,16 +49,6 @@ impl Sphere {
         let discriminant = b * b - a * c;
         if discriminant >= 0.0 {
             let t = (-b - discriminant.sqrt()) / a;
-            if t < t_max && t > t_min {
-                let p = ray.calc_point(t);
-                let normal = (p - self.center) / self.radius;
-                return Some(HitRecord {
-                    t,
-                    p,
-                    normal,
-                    material: self.material,
-                });
-            }
             check_return!(t);
             let t = (-b + discriminant.sqrt()) / a;
             check_return!(t);
@@ -67,31 +57,6 @@ impl Sphere {
         None
     }
 }
-
-// pub struct HitableList {
-//     list: Vec<Rc<dyn Hitable>>,
-// }
-//
-// impl HitableList {
-//     pub fn new(list: Vec<Rc<dyn Hitable>>) -> HitableList {
-//         HitableList { list }
-//     }
-// }
-//
-// impl Hitable for HitableList {
-//     fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
-//         let mut closet = t_max;
-//         let mut result = None;
-//         for hitable in self.list.iter() {
-//             if let Some(hit_record) = hitable.hit(r, t_min, closet) {
-//                 closet = hit_record.t;
-//                 result = Some(hit_record);
-//             }
-//         }
-//
-//         result
-//     }
-// }
 
 pub fn hit(sphere_vec: &[Sphere], r: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
     let mut closet = t_max;

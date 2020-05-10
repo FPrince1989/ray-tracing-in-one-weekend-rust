@@ -1,17 +1,16 @@
-use std::rc::Rc;
-
-use crate::hit::{HitRecord, Material};
+use crate::hit::HitRecord;
+use crate::materials::Material;
 use crate::ray::Ray;
 use crate::vec3::Vec3;
 
 pub struct Sphere {
     center: Vec3,
     radius: f32,
-    material: Rc<dyn Material>,
+    material: Material,
 }
 
 impl Sphere {
-    pub fn new(center: Vec3, radius: f32, material: Rc<dyn Material>) -> Sphere {
+    pub fn new(center: Vec3, radius: f32, material: Material) -> Sphere {
         Sphere {
             center,
             radius,
@@ -37,7 +36,7 @@ impl Sphere {
                         t: $t,
                         p,
                         normal,
-                        material: self.material.clone(),
+                        material: self.material,
                     });
                 }
             };
@@ -50,6 +49,16 @@ impl Sphere {
         let discriminant = b * b - a * c;
         if discriminant >= 0.0 {
             let t = (-b - discriminant.sqrt()) / a;
+            if t < t_max && t > t_min {
+                let p = ray.calc_point(t);
+                let normal = (p - self.center) / self.radius;
+                return Some(HitRecord {
+                    t,
+                    p,
+                    normal,
+                    material: self.material,
+                });
+            }
             check_return!(t);
             let t = (-b + discriminant.sqrt()) / a;
             check_return!(t);

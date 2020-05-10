@@ -25,9 +25,11 @@ impl Vec3 {
     }
 
     pub fn cross(v1: &Vec3, v2: &Vec3) -> Vec3 {
-        Vec3(v1.1 * v2.2 - v1.2 * v2.1,
-             -(v1.0 * v2.2 - v1.2 * v2.0),
-             v1.0 * v2.1 - v1.1 * v2.0)
+        Vec3(
+            v1.1 * v2.2 - v1.2 * v2.1,
+            -(v1.0 * v2.2 - v1.2 * v2.0),
+            v1.0 * v2.1 - v1.1 * v2.0,
+        )
     }
 
     pub fn dot(v1: &Vec3, v2: &Vec3) -> f32 {

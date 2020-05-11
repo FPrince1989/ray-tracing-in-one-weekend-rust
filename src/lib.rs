@@ -1,5 +1,5 @@
 use crate::camera::Camera;
-use crate::materials::Material::*;
+use crate::materials::{Dielectric, Lambertian, Material, Metal};
 use crate::objects::Sphere;
 use crate::ray::Ray;
 use crate::vec3::Vec3;
@@ -73,9 +73,9 @@ pub fn random_scene(rng: &mut ThreadRng) -> Vec<Sphere> {
     hitable_list.push(Sphere::new(
         Vec3(0.0, -1000.0, 0.0),
         1000.0,
-        Lambertian {
+        Material::Lambertian(Lambertian {
             albedo: Vec3(0.5, 0.5, 0.5),
-        },
+        }),
     ));
     for a in -11..11 {
         for b in -11..11 {
@@ -90,29 +90,33 @@ pub fn random_scene(rng: &mut ThreadRng) -> Vec<Sphere> {
                     hitable_list.push(Sphere::new(
                         center,
                         0.2,
-                        Lambertian {
+                        Material::Lambertian(Lambertian {
                             albedo: Vec3(
                                 rng.gen_range(0.0, 1.0) * rng.gen_range(0.0, 1.0),
                                 rng.gen_range(0.0, 1.0) * rng.gen_range(0.0, 1.0),
                                 rng.gen_range(0.0, 1.0) * rng.gen_range(0.0, 1.0),
                             ),
-                        },
+                        }),
                     ));
                 } else if choose_mat < 0.95 {
                     hitable_list.push(Sphere::new(
                         center,
                         0.2,
-                        Metal {
+                        Material::Metal(Metal {
                             albedo: Vec3(
                                 rng.gen_range(0.5, 1.0),
                                 rng.gen_range(0.5, 1.0),
                                 rng.gen_range(0.5, 1.0),
                             ),
                             fuzz: rng.gen_range(0.0, 0.5),
-                        },
+                        }),
                     ));
                 } else {
-                    hitable_list.push(Sphere::new(center, 0.2, Dielectric { ref_idx: 1.5 }));
+                    hitable_list.push(Sphere::new(
+                        center,
+                        0.2,
+                        Material::Dielectric(Dielectric { ref_idx: 1.5 }),
+                    ));
                 }
             }
         }
@@ -121,22 +125,22 @@ pub fn random_scene(rng: &mut ThreadRng) -> Vec<Sphere> {
     hitable_list.push(Sphere::new(
         Vec3(0.0, 1.0, 0.0),
         1.0,
-        Dielectric { ref_idx: 1.5 },
+        Material::Dielectric(Dielectric { ref_idx: 1.5 }),
     ));
     hitable_list.push(Sphere::new(
         Vec3(-4.0, 1.0, 0.0),
         1.0,
-        Lambertian {
+        Material::Lambertian(Lambertian {
             albedo: Vec3(0.4, 0.2, 0.1),
-        },
+        }),
     ));
     hitable_list.push(Sphere::new(
         Vec3(4.0, 1.0, 0.0),
         1.0,
-        Metal {
+        Material::Metal(Metal {
             albedo: Vec3(0.7, 0.6, 0.5),
             fuzz: 0.0,
-        },
+        }),
     ));
 
     hitable_list

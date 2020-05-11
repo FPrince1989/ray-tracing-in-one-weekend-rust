@@ -1,15 +1,31 @@
 use rand::Rng;
 
-use crate::hit::HitRecord;
+use crate::hit::{HitRecord, MaterialTrait};
 use crate::ray::Ray;
 use crate::vec3::Vec3;
 use rand::prelude::ThreadRng;
 
 #[derive(Copy, Clone)]
+pub struct Lambertian {
+    pub albedo: Vec3,
+}
+
+#[derive(Copy, Clone)]
+pub struct Metal {
+    pub albedo: Vec3,
+    pub fuzz: f32,
+}
+
+#[derive(Copy, Clone)]
+pub struct Dielectric {
+    pub ref_idx: f32,
+}
+
+#[derive(Copy, Clone)]
 pub enum Material {
-    Lambertian { albedo: Vec3 },
-    Metal { albedo: Vec3, fuzz: f32 },
-    Dielectric { ref_idx: f32 },
+    Lambertian(Lambertian),
+    Metal(Metal),
+    Dielectric(Dielectric),
 }
 
 fn random_in_unit_sphere(rng: &mut ThreadRng) -> Vec3 {
@@ -33,54 +49,9 @@ impl Material {
         rng: &mut ThreadRng,
     ) -> Option<(Vec3, Ray)> {
         match self {
-            Material::Lambertian { albedo } => {
-                let target = record.p + record.normal + random_in_unit_sphere(rng);
-                let scattered = Ray::new(record.p, target - record.p);
-                Some((*albedo, scattered))
-            }
-            Material::Metal { albedo, fuzz } => {
-                let fuzz = if *fuzz < 1.0 { *fuzz } else { 1.0 };
-                let reflected = reflect(&ray_in.direction.unit_vector(), &record.normal);
-                let scattered = Ray::new(record.p, reflected + random_in_unit_sphere(rng) * fuzz);
-                if Vec3::dot(&scattered.direction, &record.normal) > 0.0 {
-                    Some((*albedo, scattered))
-                } else {
-                    None
-                }
-            }
-            Material::Dielectric { ref_idx } => {
-                let attenuation = Vec3(1.0, 1.0, 1.0);
-                let reflected = reflect(&ray_in.direction, &record.normal);
-                let (outward_normal, ni_over_nt, cosine) =
-                    if Vec3::dot(&ray_in.direction, &record.normal) > 0.0 {
-                        (
-                            record.normal * -1.0,
-                            *ref_idx,
-                            ref_idx * Vec3::dot(&ray_in.direction, &record.normal)
-                                / ray_in.direction.length(),
-                        )
-                    } else {
-                        (
-                            record.normal,
-                            1.0 / ref_idx,
-                            -Vec3::dot(&ray_in.direction, &record.normal)
-                                / ray_in.direction.length(),
-                        )
-                    };
-
-                let refracted_opt = refract(&ray_in.direction, &outward_normal, ni_over_nt);
-                let reflect_prob = if refracted_opt.is_some() {
-                    schlick(cosine, *ref_idx)
-                } else {
-                    1.0
-                };
-                let ray_out = if rng.gen_range(0.0, 1.0) < reflect_prob {
-                    Ray::new(record.p, reflected)
-                } else {
-                    Ray::new(record.p, refracted_opt.unwrap())
-                };
-                Some((attenuation, ray_out))
-            }
+            Material::Lambertian(m) => m.scatter(ray_in, record, rng),
+            Material::Metal(m) => m.scatter(ray_in, record, rng),
+            Material::Dielectric(m) => m.scatter(ray_in, record, rng),
         }
     }
 }
@@ -107,4 +78,75 @@ fn schlick(cosine: f32, ref_idx: f32) -> f32 {
     let r0 = (1.0 - ref_idx) / (1.0 + ref_idx);
     let r0 = r0.powi(2);
     r0 + (1.0 - r0) * (1.0 - cosine).powi(5)
+}
+
+impl MaterialTrait for Lambertian {
+    fn scatter(
+        &self,
+        _ray_in: &Ray,
+        record: &HitRecord,
+        rng: &mut ThreadRng,
+    ) -> Option<(Vec3, Ray)> {
+        let target = record.p + record.normal + random_in_unit_sphere(rng);
+        let scattered = Ray::new(record.p, target - record.p);
+        Some((self.albedo, scattered))
+    }
+}
+
+impl MaterialTrait for Metal {
+    fn scatter(
+        &self,
+        ray_in: &Ray,
+        record: &HitRecord,
+        rng: &mut ThreadRng,
+    ) -> Option<(Vec3, Ray)> {
+        let fuzz = if self.fuzz < 1.0 { self.fuzz } else { 1.0 };
+        let reflected = reflect(&ray_in.direction.unit_vector(), &record.normal);
+        let scattered = Ray::new(record.p, reflected + random_in_unit_sphere(rng) * fuzz);
+        if Vec3::dot(&scattered.direction, &record.normal) > 0.0 {
+            Some((self.albedo, scattered))
+        } else {
+            None
+        }
+    }
+}
+
+impl MaterialTrait for Dielectric {
+    fn scatter(
+        &self,
+        ray_in: &Ray,
+        record: &HitRecord,
+        rng: &mut ThreadRng,
+    ) -> Option<(Vec3, Ray)> {
+        let attenuation = Vec3(1.0, 1.0, 1.0);
+        let reflected = reflect(&ray_in.direction, &record.normal);
+        let (outward_normal, ni_over_nt, cosine) =
+            if Vec3::dot(&ray_in.direction, &record.normal) > 0.0 {
+                (
+                    record.normal * -1.0,
+                    self.ref_idx,
+                    self.ref_idx * Vec3::dot(&ray_in.direction, &record.normal)
+                        / ray_in.direction.length(),
+                )
+            } else {
+                (
+                    record.normal,
+                    1.0 / self.ref_idx,
+                    -Vec3::dot(&ray_in.direction, &record.normal) / ray_in.direction.length(),
+                )
+            };
+
+        let refracted_opt = refract(&ray_in.direction, &outward_normal, ni_over_nt);
+        let reflect_prob = if refracted_opt.is_some() {
+            schlick(cosine, self.ref_idx)
+        } else {
+            1.0
+        };
+        let ray_out = if rng.gen_range(0.0, 1.0) < reflect_prob {
+            Ray::new(record.p, reflected)
+        } else {
+            Ray::new(record.p, refracted_opt.unwrap())
+        };
+        Some((attenuation, ray_out))
+    }
 }

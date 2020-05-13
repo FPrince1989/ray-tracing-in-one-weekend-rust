@@ -1,10 +1,11 @@
-use crate::camera::Camera;
-use crate::materials::{Dielectric, Lambertian, Material, Metal};
-use crate::objects::Sphere;
-use crate::ray::Ray;
-use crate::vec3::Vec3;
 use rand::rngs::ThreadRng;
 use rand::Rng;
+
+use crate::camera::Camera;
+use crate::materials::{Dielectric, Lambertian, Material, Metal};
+use crate::objects::{Object, Sphere};
+use crate::ray::Ray;
+use crate::vec3::Vec3;
 
 pub mod camera;
 pub mod hit;
@@ -13,7 +14,7 @@ pub mod objects;
 pub mod ray;
 pub mod vec3;
 
-pub fn draw(mut rng: &mut ThreadRng, nx: i32, ny: i32, ns: i32, world: &[Sphere]) -> String {
+pub fn draw(mut rng: &mut ThreadRng, nx: i32, ny: i32, ns: i32, world: &[Object]) -> String {
     let look_from = Vec3(13.0, 2.0, 3.0);
     let look_at = Vec3(0.0, 0.0, 0.0);
     let dist_to_focus = 10.0;
@@ -53,7 +54,7 @@ pub fn draw(mut rng: &mut ThreadRng, nx: i32, ny: i32, ns: i32, world: &[Sphere]
     image_content
 }
 
-fn color(r: &Ray, world: &[Sphere], depth: i32, rng: &mut ThreadRng) -> Vec3 {
+fn color(r: &Ray, world: &[Object], depth: i32, rng: &mut ThreadRng) -> Vec3 {
     if let Some(hit_record) = objects::hit(world, r, 0.001, std::f32::MAX) {
         if depth < 50 {
             if let Some((attenuation, scattered)) = hit_record.material.scatter(r, &hit_record, rng)
@@ -68,15 +69,15 @@ fn color(r: &Ray, world: &[Sphere], depth: i32, rng: &mut ThreadRng) -> Vec3 {
     Vec3(1.0, 1.0, 1.0) * (1.0 - t) + Vec3(0.5, 0.7, 1.0) * t
 }
 
-pub fn random_scene(rng: &mut ThreadRng) -> Vec<Sphere> {
-    let mut hitable_list: Vec<Sphere> = Vec::new();
-    hitable_list.push(Sphere::new(
+pub fn random_scene(rng: &mut ThreadRng) -> Vec<Object> {
+    let mut hitable_list: Vec<Object> = Vec::new();
+    hitable_list.push(Object::Sphere(Sphere::new(
         Vec3(0.0, -1000.0, 0.0),
         1000.0,
         Material::Lambertian(Lambertian {
             albedo: Vec3(0.5, 0.5, 0.5),
         }),
-    ));
+    )));
     for a in -11..11 {
         for b in -11..11 {
             let choose_mat = rng.gen_range(0.0, 1.0);
@@ -87,7 +88,7 @@ pub fn random_scene(rng: &mut ThreadRng) -> Vec<Sphere> {
             );
             if (center - Vec3(4.0, 0.2, 0.0)).length() > 0.9 {
                 if choose_mat < 0.8 {
-                    hitable_list.push(Sphere::new(
+                    hitable_list.push(Object::Sphere(Sphere::new(
                         center,
                         0.2,
                         Material::Lambertian(Lambertian {
@@ -97,9 +98,9 @@ pub fn random_scene(rng: &mut ThreadRng) -> Vec<Sphere> {
                                 rng.gen_range(0.0, 1.0) * rng.gen_range(0.0, 1.0),
                             ),
                         }),
-                    ));
+                    )));
                 } else if choose_mat < 0.95 {
-                    hitable_list.push(Sphere::new(
+                    hitable_list.push(Object::Sphere(Sphere::new(
                         center,
                         0.2,
                         Material::Metal(Metal {
@@ -110,38 +111,38 @@ pub fn random_scene(rng: &mut ThreadRng) -> Vec<Sphere> {
                             ),
                             fuzz: rng.gen_range(0.0, 0.5),
                         }),
-                    ));
+                    )));
                 } else {
-                    hitable_list.push(Sphere::new(
+                    hitable_list.push(Object::Sphere(Sphere::new(
                         center,
                         0.2,
                         Material::Dielectric(Dielectric { ref_idx: 1.5 }),
-                    ));
+                    )));
                 }
             }
         }
     }
 
-    hitable_list.push(Sphere::new(
+    hitable_list.push(Object::Sphere(Sphere::new(
         Vec3(0.0, 1.0, 0.0),
         1.0,
         Material::Dielectric(Dielectric { ref_idx: 1.5 }),
-    ));
-    hitable_list.push(Sphere::new(
+    )));
+    hitable_list.push(Object::Sphere(Sphere::new(
         Vec3(-4.0, 1.0, 0.0),
         1.0,
         Material::Lambertian(Lambertian {
             albedo: Vec3(0.4, 0.2, 0.1),
         }),
-    ));
-    hitable_list.push(Sphere::new(
+    )));
+    hitable_list.push(Object::Sphere(Sphere::new(
         Vec3(4.0, 1.0, 0.0),
         1.0,
         Material::Metal(Metal {
             albedo: Vec3(0.7, 0.6, 0.5),
             fuzz: 0.0,
         }),
-    ));
+    )));
 
     hitable_list
 }

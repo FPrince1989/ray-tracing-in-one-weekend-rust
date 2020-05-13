@@ -1,4 +1,4 @@
-use crate::hit::HitRecord;
+use crate::hit::{HitRecord, Hitable};
 use crate::materials::Material;
 use crate::ray::Ray;
 use crate::vec3::Vec3;
@@ -19,13 +19,27 @@ impl Sphere {
     }
 }
 
-impl Sphere {
+pub enum Object {
+    Sphere(Sphere),
+}
+
+impl Object {
+    #[inline]
+    pub fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
+        match self {
+            Object::Sphere(o) => o.hit(ray, t_min, t_max),
+        }
+    }
+}
+
+impl Hitable for Sphere {
     /// dot(r.dir,r.dir)*t*t + 2*dot(r.dir, r.origin-center)*t + dot(r.origin-center-r.origin-center) - radius*radius = 0
     /// -b-sqrt(b*b - 4*a*c) / 2*a
     /// b' = b/2
     /// -2*b' - 2*sqrt(b'*b' - a*c) / 2*a
     /// -b' - sqrt(b'*b' -a*c) /a
     #[allow(clippy::many_single_char_names)]
+    #[inline]
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
         macro_rules! check_return {
             ($t:expr) => {
@@ -58,11 +72,11 @@ impl Sphere {
     }
 }
 
-pub fn hit(sphere_vec: &[Sphere], r: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
+pub fn hit(hitable_list: &[Object], r: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
     let mut closet = t_max;
     let mut result = None;
-    for sphere in sphere_vec.iter() {
-        if let Some(hit_record) = sphere.hit(r, t_min, closet) {
+    for o in hitable_list.iter() {
+        if let Some(hit_record) = o.hit(r, t_min, closet) {
             closet = hit_record.t;
             result = Some(hit_record);
         }

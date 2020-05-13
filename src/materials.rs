@@ -42,6 +42,7 @@ fn random_in_unit_sphere(rng: &mut ThreadRng) -> Vec3 {
 }
 
 impl Material {
+    #[inline]
     pub fn scatter(
         &self,
         ray_in: &Ray,
@@ -81,6 +82,7 @@ fn schlick(cosine: f32, ref_idx: f32) -> f32 {
 }
 
 impl MaterialTrait for Lambertian {
+    #[inline]
     fn scatter(
         &self,
         _ray_in: &Ray,
@@ -94,6 +96,7 @@ impl MaterialTrait for Lambertian {
 }
 
 impl MaterialTrait for Metal {
+    #[inline]
     fn scatter(
         &self,
         ray_in: &Ray,
@@ -112,6 +115,7 @@ impl MaterialTrait for Metal {
 }
 
 impl MaterialTrait for Dielectric {
+    #[inline]
     fn scatter(
         &self,
         ray_in: &Ray,
